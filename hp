@@ -46,12 +46,19 @@ Address=172.24.1.1/24
 DHCPServer=yes
 EOF
 
-# 取消屏蔽并启动systemd-networkd和systemd-resolved
+# 配置NetworkManager忽略wlan0
+echo "配置NetworkManager忽略wlan0..."
+echo -e "[keyfile]\nunmanaged-devices=interface-name:wlan0" >> /etc/NetworkManager/NetworkManager.conf
+
+# 重启NetworkManager
+echo "重启NetworkManager..."
+systemctl restart NetworkManager
+
+# 启动并启用systemd-networkd和systemd-resolved
 echo "启动并启用networkd和resolved..."
 systemctl unmask systemd-networkd
 systemctl start systemd-networkd
 systemctl enable systemd-networkd
-systemctl unmask systemd-resolved
 systemctl start systemd-resolved
 systemctl enable systemd-resolved
 
