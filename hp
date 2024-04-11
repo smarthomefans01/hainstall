@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# 安装hostapd
+echo "安装hostapd..."
+apt update
+apt install hostapd -y
+
+# 禁用hostapd的自启动
+echo "禁用hostapd的自启动..."
+systemctl unmask hostapd
+systemctl disable hostapd
+
+# 生成随机SSID后缀并配置hostapd
+ssid_part=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 2 ; echo '')
+ssid="smb${ssid_part}"
+echo "生成的SSID为：$ssid"
+cat <<EOF > /etc/hostapd/hostapd.conf
+interface=wlan0
+driver=nl80211
+ssid=$ssid
+hw_mode=g
+channel=7
+wmm_enabled=0
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=87654321
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+EOF
+
+# 指定hostapd的配置文件路径
+echo "指定hostapd配置文件路径..."
+sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+
+# 配置无线接口的网络
+echo "配置无线接口的网络..."
+cat <<EOF > /etc/systemd/network/08-wlan0.network
+[Match]
+Name=wlan0
+
+[Network]
+Address=172.24.1.1/24
+DHCPServer=yes
+EOF
+
+# 取消屏蔽并启动systemd-networkd和systemd-resolved
+echo "启动并启用networkd和resolved..."
+systemctl unmask systemd-networkd
+systemctl start systemd-networkd
+systemctl enable systemd-networkd
+systemctl unmask systemd-resolved
+systemctl start systemd-resolved
+systemctl enable systemd-resolved
+
+# 启动hostapd
+echo "启动并启用hostapd..."
+systemctl start hostapd
+systemctl enable hostapd
+
+echo "Wi-Fi热点设置完成！SSID为：$ssid"
