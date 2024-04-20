@@ -2,6 +2,37 @@
 
 # 修改dtb名称
 
+#!/bin/bash
+
+# Set timezone to Asia/Shanghai
+echo "Setting timezone to Asia/Shanghai..."
+sudo timedatectl set-timezone Asia/Shanghai
+
+# Install NTP service if not already installed
+echo "Installing NTP service..."
+sudo apt-get install -y ntp
+
+# Configure NTP server for China
+echo "Configuring NTP server for China..."
+sudo sed -i '/pool 0.debian.pool.ntp.org iburst/d' /etc/ntp.conf
+echo "server 0.cn.pool.ntp.org iburst" | sudo tee -a /etc/ntp.conf
+
+# Enable and start NTP service
+echo "Enabling and starting NTP service..."
+sudo systemctl enable ntp
+sudo systemctl start ntp
+
+# Check NTP service status
+echo "Checking NTP service status..."
+sudo systemctl status ntp
+
+# Add a note to the user
+echo "The system will now synchronize time with NTP server on boot."
+
+# End of the bash script
+
+
+
 # 1.给盒子命名
 hostnamectl set-hostname smarthomefansbox
 
@@ -110,4 +141,9 @@ else
     echo "Error: $DAEMON_JSON_FILE does not exist."
 fi
 sudo systemctl restart docker
+
+
+ha jobs options --ignore-conditions healthy
+ha backups restore d7514368 --password smb20240420
+
 
