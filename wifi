@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# 函数：列出可用的Wi-Fi网络，并允许用户选择一个网络
+list_and_select_wifi() {
+    # 列出可用的Wi-Fi网络
+    nmcli device wifi list | less -FX
+
+    echo "请选择一个Wi-Fi网络，输入对应的序号："
+    echo "如果您想要连接到未列出的Wi-Fi，请输入0"
+
+    # 创建一个数组来保存SSID
+    SSIDs=($(nmcli -t -f SSID device wifi | tail -n +2))
+
+    # 用序号显示SSID
+    for i in "${!SSIDs[@]}"; do
+        printf "%s) %s\n" "$((i+1))" "${SSIDs[$i]}"
+    done
+
+    # 提示用户输入选择
+    read -p "输入序号: " selection
+    if [[ "$selection" =~ ^[0-9]+$ ]]; then
+        if [ "$selection" -eq 0 ]; then
+            read -p "请输入Wi-Fi名称: " SSID
+        else
+            SSID=${SSIDs[$((selection-1))]}
+        fi
+    else
+        echo "输入错误，请输入一个有效的数字序号。"
+        return 1
+    fi
+
+    # 循环直到用户输入正确的密码
+    while true; do
+        # 提示用户输入密码
+        read -p "输入 $SSID 的密码: " password
+        echo
+
+        # 尝试连接到选定的Wi-Fi网络
+        if nmcli device wifi connect "$SSID" password "$password"; then
+            echo "成功连接到 $SSID."
+            break
+        else
+            echo "密码错误，请重试。"
+        fi
+    done
+
+    # 获取并显示Wi-Fi分配的IP地址
+    ip_address=$(ip addr show wlan0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+    echo "Wi-Fi的IP地址是：$ip_address"
+}
+
+# 调用函数
+list_and_select_wifi
